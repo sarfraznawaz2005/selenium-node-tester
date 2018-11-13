@@ -21,6 +21,7 @@
 /////////////////////////////////////////////
 
 require('chromedriver');
+require('pretty-error').start();
 
 const {
     Builder,
@@ -86,7 +87,7 @@ module.exports = class Tester {
         this.browser.get(url);
 
         // branding
-        this.print(boxen('Test Flow Started', {
+        this.print(boxen('Test Started', {
             padding: 1,
             borderStyle: 'double',
             borderColor: 'green',
