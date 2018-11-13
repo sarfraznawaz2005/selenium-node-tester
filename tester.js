@@ -12,6 +12,8 @@
  * 
  * @author Sarfraz Ahmed
  * 
+ * Selenium WebDriver version: 4.0.0-alpha.1
+ * 
  */
 
 /////////////////////////////////////////////
@@ -36,6 +38,8 @@ const boxen = require('boxen');
 /////////////////////////////////////////////
 
 const timeout = 60000;
+
+let testCount = 0;
 
 module.exports = class Tester {
 
@@ -97,16 +101,21 @@ module.exports = class Tester {
 
     // end assert function
     end(result) {
-        this.print(logSymbols.info, chalk.yellow("TEST: " + this.testTitle));
+        testCount++;
 
         if (result) {
-            this.print(logSymbols.success, chalk.green("SUCCESS"));
+            let text = chalk.bgGreen(chalk.black("PASS")) + ` [${testCount}] ${chalk.green(this.testTitle)}`;
+            this.print(logSymbols.success, text);
         } else {
-            this.print(logSymbols.error, chalk.red("FAILED"));
-
-            // take screenshot for failed test
+            let text = chalk.bgRed(chalk.black("FAIL")) + ` [${testCount}] ${chalk.red(this.testTitle)}`;
+            this.print(logSymbols.error, text);
             this.takeScreenshot();
         }
+    }
+
+    highlightElement(element) {
+        this.browser
+            .executeScript("arguments[0].setAttribute(arguments[1], arguments[2])", element, "style", "border: 1px solid red;");
     }
 
     // fills given form field
@@ -114,9 +123,15 @@ module.exports = class Tester {
         return await this.browser.getTitle();
     }
 
+    // switches to active element on the page
+    async switchToActiveElement() {
+        await this.browser.switchTo().activeElement();
+    }
+
     // fills given form field
     async fillField(ByField, ByValue, value) {
         const el = await this.browser.findElement(By[ByField](ByValue));
+        //this.highlightElement(el);
         await el.sendKeys(value);
     }
 
@@ -157,10 +172,21 @@ module.exports = class Tester {
         return await el.getText();
     }
 
+    // finds element in DOM visible or not.
+    async findElement(ByField, ByValue) {
+        return await this.browser.findElement(By[ByField](ByValue));
+    }
+
+    // finds elements in DOM visible or not.
+    async findElements(ByField, ByValue) {
+        return await this.browser.findElements(By[ByField](ByValue));
+    }
+
     // checks whether or not element is present in DOM visible or not.
     async isPresent(ByField, ByValue) {
         try {
-            return await this.browser.findElement(By[ByField](ByValue));
+            await this.browser.findElement(By[ByField](ByValue));
+            return true;
         } catch (e) {
             return false;
         }
