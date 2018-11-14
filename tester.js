@@ -1,5 +1,5 @@
 /**
- * Custom Tester Class / Functions
+ * Custom Tester Class
  * 
  * Each test needs start() and end() function calls.
  * 
@@ -34,8 +34,6 @@ const fs = require('fs');
 const path = require('path');
 const notifier = require('node-notifier');
 const chalk = require('chalk');
-const logSymbols = require('log-symbols');
-const boxen = require('boxen');
 /////////////////////////////////////////////
 
 const timeout = 60000;
@@ -47,7 +45,7 @@ module.exports = class Tester {
     constructor(url) {
 
         if (!url) {
-            this.print(logSymbols.error, chalk.red("url is required!"));
+            this.print(chalk.red("url is required!"));
             return;
         }
 
@@ -61,12 +59,23 @@ module.exports = class Tester {
             chromeOptions: {
                 args: [
                     //'headless', // enabling this will hide this.browser window and tests will still run
+                    '--start-maximized',
                     '--disable-infobars',
                     '--disable-gpu',
                     '--disable-extensions',
                     '--log-level=3', // fatal only
                     '--ignore-certificate-errors',
-                    '--ignore-certificate-errors-spki-list'
+                    '--ignore-gpu-blacklist',
+                    '--no-default-browser-check',
+                    '--ignore-certificate-errors-spki-list',
+                    '--disable-default-apps',
+                    '--disable-accelerated-video',
+                    '--disable-background-mode',
+                    '--disable-plugins',
+                    '--disable-plugins-discovery',
+                    '--disable-translate',
+                    '--no-experiments',
+                    '--disable-logging',
                 ]
             }
         };
@@ -80,19 +89,8 @@ module.exports = class Tester {
 
         this.browser = new Builder().withCapabilities(capabilities).build();
 
-        // maximize window        
-        this.browser.manage().window().maximize();
-
         // go to url
         this.browser.get(url);
-
-        // branding
-        this.print(boxen('Test Started', {
-            padding: 1,
-            borderStyle: 'double',
-            borderColor: 'green',
-            backgroundColor: 'green'
-        }));
     }
 
     // starts a test to show output later about its success or failure
@@ -104,14 +102,22 @@ module.exports = class Tester {
     end(result) {
         testCount++;
 
+        let text = "";
+        let count = ('0' + testCount).slice(-2);
+
         if (result) {
-            let text = chalk.bgGreen(chalk.black("PASS")) + ` [${testCount}] ${chalk.green(this.testTitle)}`;
-            this.print(logSymbols.success, text);
+            text = chalk.bgGreen(chalk.black(" PASS ")) + ` [${count}] ${chalk.green(this.testTitle)}`;
         } else {
-            let text = chalk.bgRed(chalk.black("FAIL")) + ` [${testCount}] ${chalk.red(this.testTitle)}`;
-            this.print(logSymbols.error, text);
+            text = chalk.bgRed(chalk.black(" FAIL ")) + ` [${count}] ${chalk.red(this.testTitle)}`;
             this.takeScreenshot();
         }
+
+        // add first empty line
+        if (testCount === 1) {
+            this.print("");
+        }
+
+        this.print(text);
     }
 
     highlightElement(element) {
@@ -199,10 +205,14 @@ module.exports = class Tester {
 
     // selects value from select2 dropdown
     async selectDropDownSelect2(selector, value) {
+        await this.sleep(250);
+
         let el = await this.browser.findElement(By.css(selector))
             .findElement(By.xpath("following-sibling::*[1]"));
 
         await el.click();
+
+        await this.sleep(1000);
 
         el = await this.browser.findElement(By.css("input.select2-search__field"));
 
@@ -213,10 +223,14 @@ module.exports = class Tester {
 
     // selects value from select2 dropdown by searching
     async searchDropDownSelect2(selector, value) {
+        await this.sleep(250);
+
         let el = await this.browser.findElement(By.css(selector))
             .findElement(By.xpath("following-sibling::*[1]"));
 
         await el.click();
+
+        await this.sleep(1000);
 
         el = await this.browser.findElement(By.css("input.select2-search__field"));
 
