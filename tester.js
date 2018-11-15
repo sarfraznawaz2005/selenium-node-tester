@@ -42,11 +42,40 @@ let testCount = 0;
 
 module.exports = class Tester {
 
-    constructor(url) {
+    constructor(url, hideWindow = false) {
 
         if (!url) {
             this.print(chalk.red("url is required!"));
             return;
+        }
+
+        let args = [
+            '--log-level=3', // fatal only
+            '--start-maximized',
+            '--no-default-browser-check',
+            '--no-experiments',
+            '--ignore-gpu-blacklist',
+            '--ignore-certificate-errors',
+            '--ignore-certificate-errors-spki-list',
+            '--disable-infobars',
+            '--disable-gpu',
+            '--disable-extensions',
+            '--disable-default-apps',
+            '--disable-accelerated-video',
+            '--disable-background-mode',
+            '--disable-plugins',
+            '--disable-plugins-discovery',
+            '--disable-translate',
+            '--disable-logging',
+            '--disable-web-security',
+            '--disable-site-isolation-trials',
+            //'--user-data-dir=./tmp',
+        ];
+
+        // see whether to hide browser window
+        if (hideWindow) {
+            args.push('headless');
+            args.push('--window-size=1366x768'); // fix for headless lesser window size
         }
 
         let capabilities = {
@@ -57,26 +86,7 @@ module.exports = class Tester {
                 'browser': 'OFF'
             },
             chromeOptions: {
-                args: [
-                    //'headless', // enabling this will hide this.browser window and tests will still run
-                    '--start-maximized',
-                    '--disable-infobars',
-                    '--disable-gpu',
-                    '--disable-extensions',
-                    '--log-level=3', // fatal only
-                    '--ignore-certificate-errors',
-                    '--ignore-gpu-blacklist',
-                    '--no-default-browser-check',
-                    '--ignore-certificate-errors-spki-list',
-                    '--disable-default-apps',
-                    '--disable-accelerated-video',
-                    '--disable-background-mode',
-                    '--disable-plugins',
-                    '--disable-plugins-discovery',
-                    '--disable-translate',
-                    '--no-experiments',
-                    '--disable-logging',
-                ]
+                args: args
             }
         };
 
@@ -123,6 +133,14 @@ module.exports = class Tester {
     highlightElement(element) {
         this.browser
             .executeScript("arguments[0].setAttribute(arguments[1], arguments[2])", element, "style", "border: 1px solid red;");
+    }
+
+    // checks if given text contains given keyword
+    contains(text, keyword) {
+        text = text.toString();
+        keyword = keyword.toString();
+
+        return text.toLowerCase().indexOf(keyword.toLowerCase()) > -1;
     }
 
     // fills given form field
