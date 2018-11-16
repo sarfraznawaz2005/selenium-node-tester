@@ -68,8 +68,7 @@ module.exports = class Tester {
             '--disable-translate',
             '--disable-logging',
             '--disable-web-security',
-            '--disable-site-isolation-trials',
-            //'--user-data-dir=./tmp',
+            '--disable-site-isolation-trials'
         ];
 
         // see whether to hide browser window
