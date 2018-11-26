@@ -142,7 +142,12 @@ module.exports = class Tester {
         return text.toLowerCase().indexOf(keyword.toLowerCase()) > -1;
     }
 
-    // fills given form field
+    // go to given url
+    async goto(url) {
+        return await this.browser.get(url);
+    }
+
+    // gets title of the page
     async getTitle() {
         return await this.browser.getTitle();
     }
@@ -255,6 +260,24 @@ module.exports = class Tester {
         await this.sleep(3000);
         await el.sendKeys(Key.BACK_SPACE);
         await el.sendKeys(Key.RETURN);
+    }
+
+    // scrolls to bottom of page
+    async scrollBottom(pixels) {
+        const scrollTo = pixels || 'document.body.scrollHeight';
+
+        await this.browser.executeScript(`window.scrollTo(0,${scrollTo})`);
+
+        await this.sleep(1000);
+    }
+
+    // scrolls to top of page
+    async scrollTop(pixels) {
+        const scrollTo = pixels || 0;
+
+        await this.browser.executeScript(`window.scrollTo(0,${scrollTo})`);
+
+        await this.sleep(1000);
     }
 
     // closes browser window
