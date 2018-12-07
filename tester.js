@@ -36,7 +36,7 @@ const notifier = require('node-notifier');
 const chalk = require('chalk');
 /////////////////////////////////////////////
 
-const timeout = 60000;
+const timeout = 180000; // 3 minutes max wait time
 
 let testCount = 0;
 
@@ -97,7 +97,14 @@ module.exports = class Tester {
         this.until = until;
 
         this.browser = new Builder().withCapabilities(capabilities).build();
-
+        
+        // setup timeouts
+        this.browser.manage().setTimeouts({implicit: timeout, pageLoad: timeout, script: timeout}).then(() => {
+			this.browser.manage().getTimeouts().then((t) => {
+				//console.info(t);
+			});        
+        });
+		
         // go to url
         this.browser.get(url);
     }
@@ -142,7 +149,12 @@ module.exports = class Tester {
         return text.toLowerCase().indexOf(keyword.toLowerCase()) > -1;
     }
 
-    // fills given form field
+    // go to given url
+    async goto(url) {
+        return await this.browser.get(url);
+    }
+
+    // gets title of the page
     async getTitle() {
         return await this.browser.getTitle();
     }
@@ -154,11 +166,14 @@ module.exports = class Tester {
 
     // fills given form field
     async fillField(ByField, ByValue, value) {
-        const el = await this.browser.findElement(By[ByField](ByValue));
-        //this.highlightElement(el);
-        await el.sendKeys(value);
+        const el = await this.findElement(ByField, ByValue);
+        
+        if (el) {
+			//this.highlightElement(el);
+			await el.sendKeys(value);        
+        }
     }
-
+    
     // waits until given element is located and also visible
     async waitForElement(ByField, ByValue) {
         const el = await this.browser.wait(until.elementLocated(By[ByField](ByValue)), timeout);
@@ -166,6 +181,14 @@ module.exports = class Tester {
 
         return el;
     }
+    
+    // waits until given element is not visible
+    async waitUntilNotVisible(ByField, ByValue) {
+        const el = await this.browser.wait(until.elementLocated(By[ByField](ByValue)), timeout);
+        await this.browser.wait(until.elementIsNotVisible(el), timeout);
+
+        return el;
+    }    
 
     // waits until url contains given text
     async waitUntilUrlHas(keyword) {
@@ -209,16 +232,21 @@ module.exports = class Tester {
     // checks whether or not element is present in DOM visible or not.
     async isPresent(ByField, ByValue) {
         try {
-            await this.browser.findElement(By[ByField](ByValue));
-            return true;
+            return await this.browser.findElement(By[ByField](ByValue));
         } catch (e) {
             return false;
         }
     }
 
+    // pause execution for given amount of time
     async sleep(time) {
         await this.browser.sleep(time);
     }
+    
+    // gives some time to selenium to wait for elements, better to use than sleep
+    async sleepImplicitly(time) {
+        await this.browser.manage().setTimeouts({implicit: time});
+    }    
 
     // selects value from select2 dropdown
     async selectDropDownSelect2(selector, value) {
@@ -234,7 +262,7 @@ module.exports = class Tester {
         el = await this.browser.findElement(By.css("input.select2-search__field"));
 
         await el.sendKeys(value);
-        await this.sleep(1000);
+        await this.sleep(1500);
         await el.sendKeys(Key.RETURN);
     }
 
@@ -255,6 +283,24 @@ module.exports = class Tester {
         await this.sleep(3000);
         await el.sendKeys(Key.BACK_SPACE);
         await el.sendKeys(Key.RETURN);
+    }
+
+    // scrolls to bottom of page
+    async scrollBottom(pixels) {
+        const scrollTo = pixels || 'document.body.scrollHeight';
+
+        await this.browser.executeScript(`window.scrollTo(0,${scrollTo})`);
+
+        await this.sleep(1000);
+    }
+
+    // scrolls to top of page
+    async scrollTop(pixels) {
+        const scrollTo = pixels || 0;
+
+        await this.browser.executeScript(`window.scrollTo(0,${scrollTo})`);
+
+        await this.sleep(1000);
     }
 
     // closes browser window
