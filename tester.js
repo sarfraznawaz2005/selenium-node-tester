@@ -303,7 +303,7 @@ module.exports = class Tester {
         await this.sleep(1000);
     }
 
-    // scrolls to given element
+    // scroll to given element
     async scrollToElement(el) {
         await this.browser.executeScript("arguments[0].scrollIntoView();", el);
     }
