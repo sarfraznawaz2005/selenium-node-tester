@@ -53,22 +53,25 @@ module.exports = class Tester {
             '--log-level=3', // fatal only
             '--start-maximized',
             '--no-default-browser-check',
+            '--disable-infobars',
+            '--disable-web-security',
+            '--disable-site-isolation-trials',
             '--no-experiments',
             '--ignore-gpu-blacklist',
             '--ignore-certificate-errors',
             '--ignore-certificate-errors-spki-list',
-            '--disable-infobars',
-            '--disable-gpu',
+            //'--disable-gpu',
             '--disable-extensions',
             '--disable-default-apps',
             '--disable-accelerated-video',
             '--disable-background-mode',
-            '--disable-plugins',
+            //'--disable-plugins',
             '--disable-plugins-discovery',
             '--disable-translate',
-            '--disable-logging',
-            '--disable-web-security',
-            '--disable-site-isolation-trials'
+            //'--disable-logging',
+            //'--enable-features=NetworkService',
+            //'--disable-setuid-sandbox',
+            //'--no-sandbox'
         ];
 
         // see whether to hide browser window
@@ -97,14 +100,20 @@ module.exports = class Tester {
         this.until = until;
 
         this.browser = new Builder().withCapabilities(capabilities).build();
-        
+
         // setup timeouts
-        this.browser.manage().setTimeouts({implicit: timeout, pageLoad: timeout, script: timeout}).then(() => {
-			this.browser.manage().getTimeouts().then((t) => {
-				//console.info(t);
-			});        
+        this.browser.manage().setTimeouts({
+            implicit: timeout,
+            pageLoad: timeout,
+            script: timeout
+        }).then(() => {
+            this.browser.manage().getTimeouts().then((t) => {
+                //console.info(t);
+            });
         });
-		
+
+        this.result = "";
+
         // go to url
         this.browser.get(url);
     }
@@ -115,7 +124,7 @@ module.exports = class Tester {
     }
 
     // end assert function
-    end(result) {
+    async end(result) {
         testCount++;
 
         let text = "";
@@ -125,13 +134,15 @@ module.exports = class Tester {
             text = chalk.bgGreen(chalk.black(" PASS ")) + ` [${count}] ${chalk.green(this.testTitle)}`;
         } else {
             text = chalk.bgRed(chalk.black(" FAIL ")) + ` [${count}] ${chalk.red(this.testTitle)}`;
-            this.takeScreenshot();
+            await this.takeScreenshot();
         }
 
         // add first empty line
         if (testCount === 1) {
             this.print("");
         }
+
+        this.result += "\n" + text;
 
         this.print(text);
     }
@@ -167,13 +178,13 @@ module.exports = class Tester {
     // fills given form field
     async fillField(ByField, ByValue, value) {
         const el = await this.findElement(ByField, ByValue);
-        
+
         if (el) {
-			//this.highlightElement(el);
-			await el.sendKeys(value);        
+            //this.highlightElement(el);
+            await el.sendKeys(value);
         }
     }
-    
+
     // waits until given element is located and also visible
     async waitForElement(ByField, ByValue) {
         const el = await this.browser.wait(until.elementLocated(By[ByField](ByValue)), timeout);
@@ -181,24 +192,34 @@ module.exports = class Tester {
 
         return el;
     }
-    
+
     // waits until given element is not visible
     async waitUntilNotVisible(ByField, ByValue) {
         const el = await this.browser.wait(until.elementLocated(By[ByField](ByValue)), timeout);
         await this.browser.wait(until.elementIsNotVisible(el), timeout);
 
         return el;
-    }    
+    }
 
     // waits until url contains given text
     async waitUntilUrlHas(keyword) {
         return await this.browser.wait(until.urlContains(keyword), timeout);
     }
 
+    async waitUntilPageLoaded() {
+        this.browser.wait(function () {
+            return this.browser.executeScript('return document.readyState').then(function (readyState) {
+                return readyState === 'complete';
+            });
+        });
+    }
+
     // click an element
     async click(ByField, ByValue) {
         await this.sleep(1000);
-        await this.browser.findElement(By[ByField](ByValue)).click();
+        const el = this.browser.findElement(By[ByField](ByValue));
+        await this.highlightElement(el);
+        await el.click();
     }
 
     // submit form
@@ -242,11 +263,13 @@ module.exports = class Tester {
     async sleep(time) {
         await this.browser.sleep(time);
     }
-    
+
     // gives some time to selenium to wait for elements, better to use than sleep
     async sleepImplicitly(time) {
-        await this.browser.manage().setTimeouts({implicit: time});
-    }    
+        await this.browser.manage().setTimeouts({
+            implicit: time
+        });
+    }
 
     // selects value from select2 dropdown
     async selectDropDownSelect2(selector, value) {
@@ -303,11 +326,11 @@ module.exports = class Tester {
         await this.sleep(1000);
     }
 
-    // scroll to given element
+    // scrolls to given element
     async scrollToElement(el) {
         await this.browser.executeScript("arguments[0].scrollIntoView();", el);
     }
-    
+
     // closes browser window
     close() {
         this.browser.close();
@@ -315,17 +338,32 @@ module.exports = class Tester {
 
     // used to take screenshot
     takeScreenshot() {
+        return new Promise((resolve) => {
 
-        let dir = './failedScreens';
+            let dir = './failedScreens';
 
-        if (!fs.existsSync(dir)) {
-            fs.mkdirSync(dir);
-        }
+            if (!fs.existsSync(dir)) {
+                fs.mkdirSync(dir);
+            } else {
+                // clean any previous files
+                fs.readdir(dir, (err, files) => {
+                    if (err) throw err;
 
-        this.browser.takeScreenshot().then((data) => {
-            let screenshotPath = `${path.resolve(__dirname, dir)}/${this.testTitle}.png`;
+                    for (const file of files) {
+                        fs.unlink(path.join(dir, file), err => {
+                            if (err) throw err;
+                        });
+                    }
+                });
+            }
 
-            fs.writeFileSync(screenshotPath, data, 'base64');
+            this.browser.takeScreenshot().then((data) => {
+                let screenshotPath = `${path.resolve(__dirname, dir)}/${this.testTitle}.png`;
+
+                fs.writeFileSync(screenshotPath, data, 'base64');
+
+                resolve(true);
+            });
         });
     }
 
